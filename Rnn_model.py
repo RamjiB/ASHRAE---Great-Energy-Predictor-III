@@ -23,4 +23,4 @@ print(train_df[train_df['building_id'] == 0]['timestamp'].describe())
 # group by building_id
 grouped = train_df.groupby('building_id')
 print(len(grouped.groups.keys()))
-distribution_plots(grouped)
+# distribution_plots(grouped)
