@@ -1,5 +1,11 @@
 import seaborn as sns
 import matplotlib.pyplot as plt
+import pandas as pd
+import numpy as np
+import keras.backend as K
+from keras.models import Sequential
+from keras.layers import SimpleRNN,Dense
+from keras.optimizers import Adam
 
 
 def distribution_plots(grouped):
@@ -29,3 +35,27 @@ def meter_reading_length_plot(grouped, data='train'):
     plt.xlabel('keys')
     plt.ylabel('length of timestamp')
     plt.show()
+
+
+def description_func(df):
+    desc_details = pd.DataFrame()
+    for i,col in enumerate(df.columns):
+        desc_details[col] = df[col].describe()
+    desc_details.loc['dtype'] = df.dtypes
+    print(desc_details)
+
+
+def rmsle(y_true,y_pred):
+        y_true = K.log(y_true+1)
+        y_pred = K.log(y_pred+1)
+        return K.sqrt(K.mean(K.square(y_pred-y_true)))
+
+
+def RNN_model():
+    m = Sequential()
+    m.add(SimpleRNN(8, input_shape=(4, 1)))
+    # m.add(Dense(16, activation='relu'))
+    m.add(Dense(1, activation='relu'))
+    m.summary()
+    m.compile(optimizer=Adam(lr=0.001), loss=rmsle, metrics=['accuracy'])
+    return m
