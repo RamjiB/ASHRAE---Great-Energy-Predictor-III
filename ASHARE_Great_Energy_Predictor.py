@@ -76,23 +76,31 @@ print(len(grouped.groups.keys()))
 g = grouped.get_group(0)
 
 
-x_t, x_v = u_func.data_preprocess(g)
-#
-# #Normalize the data
-# x_t = Normalizer().fit(x_t).transform(x_t)
-# x_v = Normalizer().fit(x_v).transform(x_v)
-# #
-# # x_t = np.expand_dims(x_t, 2)
-# # x_v = np.expand_dims(x_v, 2)
-# #
+x_t, x_v, y_t, y_v = u_func.data_preprocess(g)
+
 print('----------------------------------------------------------------')
 print('x_t shape: ', x_t.shape)
 print('x_v shape: ', x_v.shape)
+print('y_t shape: ', y_t.shape)
+print('y_v shape: ', y_v.shape)
 print('----------------------------------------------------------------')
 
 # creating time series data
-x_t, y_t = u_func.data_creation(x_t, dataset='train')
-x_v, y_v = u_func.data_creation(x_v, dataset='valid')
+x_t, y_t = u_func.new_data_creation(x_t, y_t)
+x_v, y_v = u_func.new_data_creation(x_v, y_v)
+
+print('----------------------------------------------------------------')
+print('x_t shape: ', x_t.shape)
+print('y_t shape: ', y_t.shape)
+print('x_v shape: ', x_v.shape)
+print('y_v shape: ', y_v.shape)
+print('----------------------------------------------------------------')
+
+
+# x_t, y_t = u_func.data_creation(x_t, dataset='train')
+# x_v, y_v = u_func.data_creation(x_v, dataset='valid')
+
+
 
 # --------------------- Model ------------------------
 #
@@ -101,15 +109,14 @@ x_v, y_v = u_func.data_creation(x_v, dataset='valid')
 model = u_func.lstm_model()
 #
 # # set callbacks
-cp = ModelCheckpoint('lstm_model_1.h5', monitor='val_acc', mode='max', save_best_only=True,verbose=1)
-rp = ReduceLROnPlateau(monitor='val_acc', patience=3, factor=0.1,mode='max')
-csv = CSVLogger('lstm_model.csv', separator=',', append=False)
-cb = [cp, rp, csv]
+# cp = ModelCheckpoint('rnn_model_1.h5', monitor='val_acc', mode='max', save_best_only=True,verbose=1)
+# rp = ReduceLROnPlateau(monitor='val_acc', patience=3, factor=0.1, mode='max')
+# csv = CSVLogger('rnn_model.csv', separator=',', append=False)
+# cb = [cp, rp, csv]
 #
-model.fit(x_t, y_t, epochs=1, batch_size=32, validation_data=(x_v, y_v), callbacks=cb)
+model.fit(x_t, y_t, epochs=1, batch_size=32, validation_data=(x_v, y_v))
 #
 pred = model.predict(x_v)
-print(pred[:5])
 print(pred.shape)
 
 sns.distplot(y_v)

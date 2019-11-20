@@ -31,7 +31,7 @@ def meter_reading_length_plot(grouped, data='train'):
         g = grouped.get_group(b_id)
         l.append(len(g['timestamp']))
     plt.plot(keys, l, 'r*')
-    plt.title('timestamp length for '+data+' data')
+    plt.title('timestamp length for ' + data + ' data')
     plt.xlabel('keys')
     plt.ylabel('length of timestamp')
     plt.show()
@@ -39,14 +39,13 @@ def meter_reading_length_plot(grouped, data='train'):
 
 def description_func(df):
     desc_details = pd.DataFrame()
-    for i,col in enumerate(df.columns):
+    for i, col in enumerate(df.columns):
         desc_details[col] = df[col].describe()
     desc_details.loc['dtype'] = df.dtypes
     print(desc_details)
 
 
 def data_preprocess(g):
-
     g.drop(['building_id'], axis=1, inplace=True)
 
     d_t = g['timestamp'].str.split(' ', 1, expand=True)
@@ -76,15 +75,30 @@ def data_preprocess(g):
     g['hour'] = g['hour'].cat.codes
 
     x_t = g[g['month'] != 11]
-    x_v = pd.concat([g[g['month'] == 10], g[g['month'] == 11]])
+    y_t = x_t['meter_reading']
+    x_v = g[g['month'] == 11]
+    y_v = x_v['meter_reading']
 
+    x_t.drop(['meter_reading'], axis=1, inplace=True)
+    x_v.drop(['meter_reading'], axis=1, inplace=True)
 
     # sns.distplot(x_t['meter_reading'])
     # sns.distplot(x_v['meter_reading'])
     # plt.show()
     # print(x_t.tail())
 
-    return x_t, x_v
+    return x_t, x_v, y_t, y_v
+
+
+def new_data_creation(x, y, dataset='train'):
+    d_x, d_y = [], []
+
+    for i in range(len(x)):
+        if i == len(x)-3:
+            break
+        d_x.append(np.array(x.iloc[i:i+2]))
+        d_y.append(np.array(y.iloc[i:i+3]))
+    return np.reshape(d_x, (len(d_x), 2, 9)), np.reshape(d_y, (len(d_y), 3))
 
 
 def data_creation(d, dataset='valid'):
@@ -132,17 +146,17 @@ def data_creation(d, dataset='valid'):
     return X, Y
 
 
-def rmsle(y_true,y_pred):
-        y_true = K.log(y_true+1)
-        y_pred = K.log(y_pred+1)
-        return K.sqrt(K.mean(K.square(y_pred-y_true)))
+def rmsle(y_true, y_pred):
+    y_true = K.log(y_true + 1)
+    y_pred = K.log(y_pred + 1)
+    return K.sqrt(K.mean(K.square(y_pred - y_true)))
 
 
-def RNN_model():
+def RNN_model(i_s=(744, 9)):
     m = Sequential()
-    m.add(SimpleRNN(25, input_shape=(9, 1)))
+    m.add(SimpleRNN(25, activation='relu', input_shape=i_s))
     m.add(Dense(128, activation='relu'))
-    m.add(Dense(1, activation='relu'))
+    m.add(Dense(745, activation='relu'))
     m.summary()
     m.compile(optimizer=Adam(lr=0.01), loss=rmsle, metrics=['accuracy'])
     return m
@@ -152,17 +166,19 @@ def Dense_model():
     m = Sequential()
     m.add(Dense(16, input_shape=(9,)))
     m.add(Dense(32, activation='relu'))
-    m.add(Dense(16,activation='relu'))
+    m.add(Dense(16, activation='relu'))
     m.add(Dense(1, activation='relu'))
     m.summary()
     m.compile(optimizer=Adam(lr=0.01), loss=rmsle, metrics=['accuracy'])
     return m
 
 
-def lstm_model(i_s = (744, 9)):
+def lstm_model(i_s=(2, 9)):
     model = Sequential()
-    model.add(LSTM(25, activation='relu', return_sequences= True, input_shape=i_s))
-    model.add(LSTM(25, activation='relu'))
-    model.add(Dense(745,activation='relu'))
-    model.compile(optimizer='adam',loss=rmsle,metrics=['accuracy'])
+    model.add(LSTM(10, activation='relu', return_sequences=True, input_shape=i_s))
+    model.add(LSTM(10, activation='relu'))
+    # model.add(Dense(64,activation='relu'))
+    model.add(Dense(3, activation='relu'))
+    model.summary()
+    model.compile(optimizer=Adam(lr=0.001), loss=rmsle, metrics=['accuracy'])
     return model
