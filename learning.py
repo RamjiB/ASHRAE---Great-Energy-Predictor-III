@@ -132,9 +132,13 @@ print('------------------------------ time Feature Engineering -----------------
 
 train_df['hour'] = train_df.timestamp.dt.hour
 train_df['weekday'] = train_df.timestamp.dt.weekday
+train_df['is_weekend'] = 1*(train_df['weekday']//5 == 1)
+train_df['is_business_hr'] = 1* (train_df['hour'].between(8,15) == True)
 
 test_df['hour'] = test_df.timestamp.dt.hour
 test_df['weekday'] = test_df.timestamp.dt.weekday
+test_df['is_weekend'] = 1*(test_df['weekday']//5 == 1)
+test_df['is_business_hr'] = 1* (test_df['hour'].between(8,15) == True)
 
 print('------------------------- Aggregate feature engineering ---------------------')
 # Creating aggregate features for buildings at various levels
@@ -155,6 +159,28 @@ train_df = train_df.merge(building_meter_hr_df,
                           on=['building_id', 'meter', 'hour'])
 test_df = test_df.merge(building_meter_hr_df,
                         on=['building_id', 'meter', 'hour'])
+
+building_meter_weekend_df = train_df.groupby(["building_id", 'meter', 'is_weekend']).agg(
+    mean_building_meter=('log_meter_reading', 'mean'),
+    median_building_meter=('log_meter_reading', 'median')
+).reset_index()
+
+train_df = train_df.merge(building_meter_weekend_df,
+                          on=['building_id', 'meter', 'is_weekend'])
+test_df = test_df.merge(building_meter_weekend_df,
+                        on=['building_id', 'meter', 'is_weekend'])
+
+building_meter_business_hr_df = train_df.groupby(["building_id", 'meter', 'is_business_hr']).agg(
+    mean_building_meter=('log_meter_reading', 'mean'),
+    median_building_meter=('log_meter_reading', 'median')
+).reset_index()
+
+train_df = train_df.merge(building_meter_business_hr_df,
+                          on=['building_id', 'meter', 'is_business_hr'])
+test_df = test_df.merge(building_meter_business_hr_df,
+                        on=['building_id', 'meter', 'is_business_hr'])
+
+
 
 print('--------------------------- Lags based Feature Engineering ----------------')
 
@@ -258,7 +284,7 @@ for site_id in tqdm(range(16), desc="site_id"):
           np.sqrt(mean_squared_error(y_train_site, y_pred_train_site)), "\n")
 print('--------------------------- CV scores ----------------------')
 print(pd.DataFrame.from_dict(cv_scores))
-pd.DataFrame.from_dict(cv_scores).to_csv('training_score_1.csv',index = False)
+pd.DataFrame.from_dict(cv_scores).to_csv('training_score_we_bh.csv',index = False)
 
 del train_df, x_train_site, y_train_site, x_tr, y_tr, dtrain, x_va, y_va, dvalid, y_pred_train_site, y_pred_val, rmse, score, cv_scores
 gc.collect()
@@ -300,4 +326,4 @@ for site_id in tqdm(range(16), desc='site_id'):
 print('---------------------------------submission-------------------------')
 sub = pd.concat(test_sites_df)
 sub.meter_reading = np.clip(np.expm1(sub.meter_reading), 0, a_max=None)
-sub.to_csv('learning_submission_1.csv', index=False)
+sub.to_csv('learning_submission_we_bh.csv', index=False)
